@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/FlpColiveira.TemplateMethodExporter/FlpColiveira.TemplateMethodExporter.csproj" />
+    <Project Path="src/Flpcoliveira.TemplateMethodExporter/Flpcoliveira.TemplateMethodExporter.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Flpcoliveira.TemplateMethodExporter.Tests/Flpcoliveira.TemplateMethodExporter.Tests.csproj" />
