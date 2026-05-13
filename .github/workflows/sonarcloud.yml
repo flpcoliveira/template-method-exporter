@@ -11,47 +11,94 @@ on:
 
 jobs:
   build-and-analyze:
+    name: Build and analyze
     runs-on: ubuntu-latest
-    
+
+    env:
+      SONAR_PROJECT_KEY: flpcoliveira_template-method-exporter
+      SONAR_ORGANIZATION: flpcoliveira
+      SONAR_HOST_URL: https://sonarcloud.io
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for better analysis relevancy
-      
+
+      - name: Set up JDK 17 (required by Sonar Scanner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'  # Using .NET 10.0 as specified in the project
-      
-      - name: Restore dependencies
-        run: dotnet restore
-      
-      - name: Build project
-        run: dotnet build --configuration Release --no-restore
-      
-      - name: Run tests with code coverage
-        run: dotnet test --configuration Release --no-build --verbosity normal /p:CollectCoverage=true /p:CoverageFormat=opencover /p:CoverageFilePath=${{ github.workspace }}/coverage.xml /p:Deterministic=true /p:IncludeTestAssembly=false /p:Exclude=[*Tests]*
-      
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v8.0.0
+          dotnet-version: '10.0.x'
+
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
         with:
-          args: >
-            -Dsonar.projectBaseDir=src/Flpcoliveira.TemplateMethodExporter
-            -Dsonar.projectKey=flpcoliveira_template-method-exporter
-            -Dsonar.organization=flpcoliveira
-            -Dsonar.sources=.
-            -Dsonar.tests=../../tests
-            -Dsonar.coverage.exclusions=../../tests/**
-            -Dsonar.cs.opencover.reportsPaths=${{ github.workspace }}/coverage.xml
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Cache dotnet-sonarscanner tool
+        id: cache-sonar-scanner
+        uses: actions/cache@v4
+        with:
+          path: ./.sonar/scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+
+      - name: Install dotnet-sonarscanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ./.sonar/scanner
+          dotnet tool update dotnet-sonarscanner --tool-path ./.sonar/scanner
+
+      - name: Restore dependencies
+        run: dotnet restore Flpcoliveira.TemplateMethodExporter.slnx
+
+      - name: Begin SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./.sonar/scanner/dotnet-sonarscanner begin \
+            /k:"${{ env.SONAR_PROJECT_KEY }}" \
+            /o:"${{ env.SONAR_ORGANIZATION }}" \
+            /d:sonar.host.url="${{ env.SONAR_HOST_URL }}" \
+            /d:sonar.token="${SONAR_TOKEN}" \
+            /d:sonar.cs.opencover.reportsPaths="${{ github.workspace }}/tests/**/TestResults/**/coverage.opencover.xml" \
+            /d:sonar.coverage.exclusions="tests/**/*,**/Program.cs" \
+            /d:sonar.exclusions="tests/**/*" \
+            /d:sonar.scanner.scanAll=false
 
-      - name: Upload coverage to SonarCloud
+      - name: Build project
+        run: dotnet build Flpcoliveira.TemplateMethodExporter.slnx --configuration Release --no-restore
+
+      - name: Run tests with code coverage (coverlet -> opencover)
+        run: |
+          dotnet test Flpcoliveira.TemplateMethodExporter.slnx \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --collect:"XPlat Code Coverage;Format=opencover" \
+            --results-directory ${{ github.workspace }}/tests/TestResults
+
+      - name: End SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+
+      - name: Upload coverage report artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: ${{ github.workspace }}/coverage.xml
+          path: ${{ github.workspace }}/tests/TestResults/**/coverage.opencover.xml
           retention-days: 30
