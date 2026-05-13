@@ -31,7 +31,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore
       
       - name: Run tests with code coverage
-        run: dotnet test --configuration Release --no-build --verbosity normal /p:CollectCoverage=true /p:CoverageFormat=opencover /p:CoverageFilePath=coverage.xml
+        run: dotnet test --configuration Release --no-build --verbosity normal /p:CollectCoverage=true /p:CoverageFormat=opencover /p:CoverageFilePath=coverage.xml /p:Deterministic=true /p:IncludeTestAssembly=false /p:Exclude=[*Tests]*
       
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v8.0.0
@@ -43,7 +43,7 @@ jobs:
             -Dsonar.sources=.
             -Dsonar.tests=../../tests
             -Dsonar.coverage.exclusions=../../tests/**
-            -Dsonar.cs.opencover.reportsPaths=../../coverage.xml
+            -Dsonar.cs.opencover.reportsPaths=../../**/coverage.xml
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -53,5 +53,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage.xml
+          path: '**/coverage.xml'
           retention-days: 30
