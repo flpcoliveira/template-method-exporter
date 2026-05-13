@@ -31,7 +31,6 @@ public abstract class Exporter<T>(IEnumerable<T> data) where T : class
             {
                 Name = p.Name,
                 Label = attribute?.Label ?? p.Name,
-                Format = attribute?.Format ?? ColumnFormatOptions.Text,
             };
         });
     }
