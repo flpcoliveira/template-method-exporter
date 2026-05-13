@@ -4,7 +4,7 @@ namespace Flpcoliveira.TemplateMethodExporter.Abstractions;
 
 public abstract class Exporter<T>(IEnumerable<T> data) where T : class
 {
-    private readonly Type _dataType = typeof(T);
+    protected readonly Type _dataType = typeof(T);
 
     protected abstract Document CreateDocument(IEnumerable<T> data, IEnumerable<ColumnMetadata> metadata);
 
@@ -31,8 +31,6 @@ public abstract class Exporter<T>(IEnumerable<T> data) where T : class
             {
                 Name = p.Name,
                 Label = attribute?.Label ?? p.Name,
-                Format = attribute?.Format ?? ColumnFormatOptions.Text,
-                DataType = p.PropertyType
             };
         });
     }

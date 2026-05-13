@@ -11,6 +11,10 @@ public enum ColumnFormatOptions
     /// </summary>
     Integer,
     /// <summary>
+    /// Format data for decimal values, e.g: 1,234.56(en-US) or 1.234,56(pt-BR)
+    /// </summary>
+    Decimal,
+    /// <summary>
     /// Format data for monetary values. e.g: $1,234.56(en-US) or R$ 1.234,56(pt-BR)
     /// </summary>
     Money,
